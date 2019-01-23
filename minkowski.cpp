@@ -77,7 +77,6 @@ bool comp(vect &a, vect &b) {
 		} else if (a.x < 0 && b.x > 0) {
 			return false;
 		}
-		return a.x < b.x;
 	}
 	ll p = a % b;
 	if (p == 0) {
@@ -122,9 +121,6 @@ vector<vect> get(vector<vect> &a, vector<vect> &b, vector<vect> &c) {
 	res.pb(A);
 	res.pb(res.back() + d[0]);
 	for (ll i = 1; i < sz(d); i++) {
-		if (d[i] == vect(0, 0)) {
-			continue;
-		}
 		vect v1 = (res.back() + d[i]) - res.back();
 		vect v2 = res.back() - res[sz(res) - 2];
 		ll p = v1 % v2;

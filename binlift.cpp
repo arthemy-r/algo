@@ -1,12 +1,13 @@
-// 191 c
-#pragma GCC optimize ("O3", "unroll-loops")
+// 519 e
+#pragma GCC optimize("Ofast", "unroll-loops")
 #include <bits/stdc++.h>
+#include <unordered_set>
+#include <unordered_map>
 #define pb push_back
 #define pf push_front
 #define popb pop_back
 #define popf pop_front
 #define all(a) (a).begin(), (a).end()
-#define rall(a) (a).rbegin(), (a).rend()
 #define sz(a) (ll)((a).size())
 #define heap priority_queue
 #define hash_map unordered_map
@@ -15,8 +16,12 @@
 #define sd second
 #define fast ios_base::sync_with_stdio(0), cin.tie(0), cout.tie(0)
 #define endl "\n"
+#define mineq(a, b) (a) = ((a)>(b))?(b):(a)
+#define maxeq(a, b) (a) = ((a)<(b))?(b):(a)
+#define istrop template <typename T> inline istream& operator >>
+#define ostrop template <typename T> inline ostream& operator <<
 using namespace std;
-typedef long long ll;
+typedef int ll;
 typedef unsigned long long ull;
 typedef long double ld;
 typedef pair<ll, ll> pll;
@@ -24,49 +29,61 @@ typedef pair<ld, ld> pld;
 typedef vector<ll> vll;
 typedef set<ll> sll;
 typedef map<ll, ll> mll;
+istrop(istream& in, pair<T, T>& v) {
+	in >> v.ft >> v.sd; return in;
+}
+ostrop(ostream& out, pair<T, T> v) {
+	out << v.ft << " " << v.sd; return out;
+}
+istrop(istream& in, vector<T>& v) {
+	for (ll i = 0; i < sz(v); i++) in >> v[i]; return in;
+}
+ostrop(ostream& out, vector<T>& v) {
+	for (ll i = 0; i < sz(v); i++) out << v[i] << " "; return out;
+}
+istrop(istream& in, pair<vector<T>*, vector<T>*> v) {
+	for (ll i = 0; i < sz(*v.ft); i++) in >> (*v.ft)[i] >> (*v.sd)[i]; return in;
+}
 const ll inf = numeric_limits<ll>::max() / 2;
 const ld eps = 1e-9;
 const ld pi = acos(-1);
 
-const ll LOG = 23;
-const ll MAXN = 1e5 + 10;
-
-struct edge {
-	ll u, i;
-	edge() {}
-	edge(ll u, ll i): u(u), i(i) {}
-};
+const ll LOG = 18;
 
 struct graph {
-	ll vn;
-	vector<edge> es[MAXN];
+	ll n;
+	vector<vll> adj;
 	graph() {}
-	graph(ll v) {
-		vn = v;
+	graph(ll n_) {
+		n = n_;
+		adj.resize(n);
 	}
-	void insert(ll v, ll u, ll i) {
-		es[v].pb({ u, i });
-		es[u].pb({ v, i });
+	inline void insert(ll v, ll u) {
+		adj[v].pb(u);
+		adj[u].pb(v);
 	}
 };
 
-ll N, K;
+ll n, m, timer = 0;
 graph g;
+vll d, sub, tin, tout;
+vector<vll> up;
 
-ll lift[MAXN][LOG];
-ll tin[MAXN], tout[MAXN];
-ll timer = 0;
-void bin_lift(ll v, ll p) {
-	tin[v] = timer++;
-	lift[v][0] = p;
-	for (ll i = 1; i < LOG; i++) {
-		lift[v][i] = lift[lift[v][i - 1]][i - 1];
+inline void dfs(ll v, ll p) {
+	up[v][0] = v;
+	up[v][1] = p;
+	for (ll i = 2; i < LOG; i++) {
+		up[v][i] = up[up[v][i - 1]][i - 1];
 	}
-	for (edge e : g.es[v]) {
-		if (e.u == p) {
+	d[v] = d[p] + 1;
+	sub[v] = 1;
+	tin[v] = timer++;
+	for (ll u : g.adj[v]) {
+		if (u == p) {
 			continue;
 		}
-		bin_lift(e.u, v);
+		dfs(u, v);
+		sub[v] += sub[u];
 	}
 	tout[v] = timer++;
 }
@@ -75,62 +92,87 @@ inline bool upper(ll a, ll b) {
 	return tin[a] <= tin[b] && tout[a] >= tout[b];
 }
 
-ll lca(ll a, ll b) {
+inline ll lca(ll a, ll b) {
 	if (upper(a, b)) {
 		return a;
 	}
 	if (upper(b, a)) {
 		return b;
 	}
-	for (ll i = LOG - 1; i >= 0; i--) {
-		if (!upper(lift[a][i], b)) {
-			a = lift[a][i];
+	for (ll i = LOG - 1; i >= 1; i--) {
+		if (!upper(up[a][i], b)) {
+			a = up[a][i];
 		}
-	}
-	return lift[a][0];
+ 	}
+	return up[a][1];
 }
 
-ll add[MAXN];
-ll ans[MAXN];
-
-ll dfs(ll v, ll p) {
-	ll res = add[v];
-	for (edge e : g.es[v]) {
-		if (e.u == p) {
-			continue;
-		}
-		ll cur = dfs(e.u, v);
-		ans[e.i] = cur;
-		res += cur;
-	}
-	return res;
+inline bool checkbit(ll n, ll p) {
+	return n & (1ll << p);
 }
 
-void solve() {
-	bin_lift(1, 1);
-	cin >> K;
-	for (ll i = 0; i < K; i++) {
+inline ll get(ll v, ll d) {
+	for (ll i = LOG - 1; i >= 1; i--) {
+		if (checkbit(d, i - 1)) {
+			v = up[v][i];
+		}
+	}
+	return v;
+}
+
+inline ll process(ll a, ll b) {
+	if (a == b) {
+		return n;
+	}
+	ll c = lca(a, b);
+	if (d[a] == d[b]) {
+		ll g = get(a, d[a] - d[c] - 1), h = get(b, d[b] - d[c] - 1);
+		return n - sub[g] - sub[h];
+	}
+	ll dist = d[a] - d[c] + d[b] - d[c];
+	if (dist % 2 == 1) {
+		return 0;
+	}
+	if (2 * (d[a] - d[c]) < dist) {
+		swap(a, b);
+	}
+	ll d2 = dist >> 1;
+	ll g = get(a, d2);
+	ll h = get(a, d2 - 1);
+	return sub[g] - sub[h];
+}
+
+inline void solve() {
+	up.assign(n, vll(LOG, 0));
+	d.resize(n), sub.resize(n);
+	tin.assign(n, 0), tout.assign(n, 0);
+	d[0] = -1;
+	dfs(0, 0);
+	for (ll i = 0; i < m; i++) {
 		ll a, b;
 		cin >> a >> b;
-		ll l = lca(a, b);
-		add[l] -= 2;
-		++add[a], ++add[b];
+		--a, --b;
+		ll ans = process(a, b);
+		cout << ans << endl;
 	}
-	dfs(1, 1);
-	for (ll i = 0; i < N - 1; i++) {
-		cout << ans[i] << " ";
+}
+
+inline void read() {
+	cin >> n;
+	g = graph(n);
+	for (ll i = 0; i < n - 1; i++) {
+		ll v, u;
+		cin >> v >> u;
+		--v, --u;
+		g.insert(v, u);
 	}
+	cin >> m;
 }
 
 int main() {
 	fast;
-	cin >> N;
-	g = graph(N);
-	for (ll i = 0; i < N - 1; i++) {
-		ll v, u;
-		cin >> v >> u;
-		g.insert(v, u, i);
-	}
+	read();
 	solve();
 	return 0;
 }
+//

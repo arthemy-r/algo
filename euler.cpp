@@ -1,4 +1,4 @@
-// I will never love anyone except myself
+// 36 e
 #define _CRT_SECURE_NO_WARNINGS
 #pragma comment(linker, "/stack:200000000")
 #pragma GCC optimize("Ofast")

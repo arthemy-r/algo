@@ -1,5 +1,4 @@
 // 20 c
-
 #pragma comment(linker, "/stack:200000000")
 #pragma GCC optimize("Ofast")
 #pragma GCC optimize ("unroll-loops")
@@ -136,7 +135,7 @@ struct splay_tree {
 		if (gp == -1) {
 			return rotate(v);
 		}
-		if (t[gp].l == p && t[p].l == v || t[gp].r == p && == t[p].r == v) {
+		if (t[gp].l == p && t[p].l == v || t[gp].r == p && t[p].r == v) {
 			rotate(p);
 			rotate(v);
 		} else {

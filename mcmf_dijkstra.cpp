@@ -1,4 +1,4 @@
-// 1061 e
+// 1107 f
 #pragma comment(linker, "/stack:200000000")
 #pragma GCC optimize("Ofast")
 #pragma GCC optimize ("unroll-loops")
@@ -20,8 +20,9 @@
 #define sd second
 #define fast ios_base::sync_with_stdio(0), cin.tie(0), cout.tie(0);
 #define endl "\n"
-#define y0 y_0
-#define y1 y_1
+#define y0 y0998244353
+#define y1 y1998244353
+#define die(cond) if (cond) for (;;) {}
 using namespace std;
 typedef long long ll;
 typedef unsigned long long ull;
@@ -31,9 +32,9 @@ typedef pair<ld, ld> pld;
 typedef vector<ll> vll;
 typedef set<ll> sll;
 typedef map<ll, ll> mll;
-const ll inf = 1e12;
+const ll inf = numeric_limits<ll>::max() / 2;
 const ld eps = 1e-9;
-const ld pi = acos(-1);
+const ld pi = acosl(-1);
 template<typename T> inline bool mineq(T& a, T b) { return (a > b) ? (a = b, 1) : 0; }
 template<typename T> inline bool maxeq(T& a, T b) { return (a < b) ? (a = b, 1) : 0; }
 
@@ -54,8 +55,9 @@ signed main() {
 }
 
 struct edge {
-	ll v, u, c, f, p;
+	ll v, u, p, c, f = 0;
 };
+
 struct graph {
 	ll n;
 	vector<edge> es;
@@ -65,10 +67,10 @@ struct graph {
 		n = n_;
 		adj.resize(n);
 	}
-	void add(ll v, ll u, ll c, ll p) {
-		es.pb({ v, u, c, 0, +p });
+	void add(ll v, ll u, ll p, ll c) {
+		es.pb({ v, u, p, c });
 		adj[v].pb(sz(es) - 1);
-		es.pb({ u, v, 0, 0, -p });
+		es.pb({ u, v, -p, 0 });
 		adj[u].pb(sz(es) - 1);
 	}
 };
@@ -79,44 +81,49 @@ struct mcmf {
 	void ford_bellman() {
 		d.assign(g.n, inf);
 		d[s] = 0;
-		for (ll i = 0; i < g.n; i++) {
+		ll f = 1;
+		while (f) {
+			f = 0;
 			for (edge e : g.es) {
 				if (e.c - e.f == 0) {
 					continue;
 				}
-				mineq(d[e.u], d[e.v] + e.p);
+				if (mineq(d[e.u], d[e.v] + e.p)) {
+					f = 1;
+				}
 			}
 		}
 		phi = d;
 	}
-	pll dijkstra() {
+	ll dijkstra() {
 		d.assign(g.n, inf);
 		path.assign(g.n, -1);
-		heap<pll> q;
+		set<pll> q;
 		d[s] = 0;
-		q.push({ -d[s], s });
+		q.insert({ d[s], s });
 		while (!q.empty()) {
 			ll v, dist;
-			tie(dist, v) = q.top();
-			q.pop();
-			if (dist != -d[v]) {
-				continue;
-			}
-			for (ll i : g.adj[v]) {
+			tie(dist, v) = *q.begin();
+			q.erase(q.begin());
+			for (int i : g.adj[v]) {
 				edge e = g.es[i];
 				if (e.c - e.f == 0) {
 					continue;
 				}
-				ll w = e.p + phi[e.u] - phi[e.v];
+				ll w = e.p + phi[e.v] - phi[e.u];
+				ll old = d[e.u];
 				if (mineq(d[e.u], d[e.v] + w)) {
-					q.push({ -d[e.u], e.u });
+					q.erase({ old, e.u });
+					q.insert({ d[e.u], e.u });
 					path[e.u] = i;
 				}
 			}
 		}
-		phi = d;
+		for (ll i = 0; i < g.n; i++) {
+			phi[i] += d[i];
+		}
 		ll c = inf;
-		ll v = t;
+		int v = t;
 		while (path[v] != -1) {
 			mineq(c, g.es[path[v]].c - g.es[path[v]].f);
 			v = g.es[path[v]].v;
@@ -132,124 +139,59 @@ struct mcmf {
 		if (c == inf) {
 			c = 0;
 		}
-		return { c, cost };
+		return cost;
 	}
-	pll flow() {
+	ll max_flow() {
 		ford_bellman();
 		ll cost = 0;
-		ll flow = 0;
-		do {
-			pll p = dijkstra();
-			cost += p.sd;
-			flow += p.ft;
-		} while (d[t] != inf);
-		return { flow, cost };
+		ll ans = 0;
+		while (1) {
+			ll p = dijkstra();
+			cost += p;
+			if (p >= 0) {
+				break;
+			}
+			mineq(ans, cost);
+		}
+		return ans;
 	}
 };
 
-ll n, x, y, q1, q2;
-vll a;
-graph g1, g2;
-vll d1, d2;
-vll col1, col2;
-vll sub1, sub2;
-mcmf mf;
-
-ll dfs(ll v, ll p, graph& g, vll& col, vll& d, vll& sub, ll good) {
-	if (d[v]) {
-		good = v;
-	}
-	col[v] = good;
-	for (ll i : g.adj[v]) {
-		edge e = g.es[i];
-		if (e.u == p) {
-			continue;
-		}
-		sub[v] += dfs(e.u, v, g, col, d, sub, good);
-	}
-	return max(d[v], sub[v]);
-}
+ll n;
+vector<int> as, bs, ks;
+vector<vll> c;
+mcmf M;
 
 void build() {
-	mf.g = graph(2 * n + 2);
-	mf.s = 2 * n;
-	mf.t = 2 * n + 1;
-	for (ll i = 0; i < n; i++) {
-		if (d1[i]) {
-			ll c = d1[i] - sub1[i];
-			if (c < 0) {
-				cout << -1 << endl;
-				exit(0);
-			}
-			mf.g.add(mf.s, i, c, 0);
+	c.resize(n, vll(n, 0));
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			c[i][j] = as[j] - bs[j] * 1ll * min(i, ks[j]);
 		}
 	}
-	for (ll i = 0; i < n; i++) {
-		if (d2[i]) {
-			ll c = d2[i] - sub2[i];
-			if (c < 0) {
-				cout << -1 << endl;
-				exit(0);
-			}
-			mf.g.add(n + i, mf.t, c, 0);
+	M.g = graph(n + n + 2);
+	M.s = n + n, M.t = n + n + 1;
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			M.g.add(i, n + j, -c[i][j], 1);
 		}
 	}
-	for (ll i = 0; i < n; i++) {
-		ll v = col1[i], u = col2[i] + n;
-		mf.g.add(v, u, 1, -a[i]);
+	for (int i = 0; i < n; i++) {
+		M.g.add(M.s, i, 0, 1);
+		M.g.add(n + i, M.t, 0, 1);
 	}
 }
 
 inline void solve() {
-	col1.assign(n, -1);
-	col2.assign(n, -1);
-	sub1.assign(n, 0);
-	sub2.assign(n, 0);
-	dfs(x, x, g1, col1, d1, sub1, x);
-	dfs(y, y, g2, col2, d2, sub2, y);
 	build();
-	pll ans = mf.flow();
-	if (ans.ft != d1[x] || ans.ft != d2[y]) {
-		cout << -1 << endl;
-		return;
-	}
-	cout << -ans.sd << endl;
+	ll ans = -M.max_flow();
+	cout << ans << endl;
 }
 
 inline void read() {
-	cin >> n >> x >> y;
-	--x, --y;
-	a.resize(n);
-	g1 = graph(n);
-	g2 = graph(n);
-	d1.resize(n, 0), d2.resize(n, 0);
-	for (ll i = 0; i < n; i++) {
-		cin >> a[i];
-	}
-	for (ll i = 0; i < n - 1; i++) {
-		ll v, u;
-		cin >> v >> u;
-		--v, --u;
-		g1.add(v, u, 0, 0);
-	}
-	for (ll i = 0; i < n - 1; i++) {
-		ll v, u;
-		cin >> v >> u;
-		--v, --u;
-		g2.add(v, u, 0, 0);
-	}
-	cin >> q1;
-	for (ll i = 0; i < q1; i++) {
-		ll k, x;
-		cin >> k >> x;
-		--k;
-		d1[k] = x;
-	}
-	cin >> q2;
-	for (ll i = 0; i < q2; i++) {
-		ll k, x;
-		cin >> k >> x;
-		--k;
-		d2[k] = x;
+	cin >> n;
+	as.resize(n), bs.resize(n), ks.resize(n);
+	for (int i = 0; i < n; i++) {
+		cin >> as[i] >> bs[i] >> ks[i];
 	}
 }

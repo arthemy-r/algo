@@ -1,10 +1,10 @@
 // 100246 a
+// meow-meow
 #pragma GCC optimize("Ofast", "unroll-loops")
 #include <bits/stdc++.h>
-#include <forward_list>
 #include <unordered_set>
 #include <unordered_map>
-#define pb push_back //
+#define pb push_back
 #define pf push_front
 #define popb pop_back
 #define popf pop_front
@@ -16,8 +16,8 @@
 #define hash_set unordered_set
 #define ft first
 #define sd second
-#define endl "\n"
 #define fast ios_base::sync_with_stdio(0), cin.tie(0), cout.tie(0)
+#define endl "\n"
 #define mineq(a, b) (a) = min((a), (b))
 #define maxeq(a, b) (a) = max((a), (b))
 using namespace std;
@@ -33,190 +33,117 @@ const ll inf = numeric_limits<ll>::max() / 2;
 const ld eps = 1e-9;
 const ld pi = acos(-1);
 
-const ll LOG = 30;
-
-struct edge {
-	ll v, u, w;
-	edge() {}
-	edge(ll v, ll u, ll w) : v(v), u(u), w(w) {}
-	bool operator < (edge e1) {
-		if (w == e1.w) {
-			return pll(v, u) < pll(e1.v, e1.u);
-		}
-		return w < e1.w;
-	}
-};
-
-struct graph {
-	ll n;//
-	vector<vector<edge>> adj;
-	vector<edge> es;
-	graph() {}
-	graph(ll n_) {
-		n = n_;
-		adj.resize(n);
-	}
-	void insert(ll v, ll u, ll w) {
-		adj[v].pb({ v, u, w });
-		adj[u].pb({ u, v, w });
-		es.pb({ v, u, w });
-	}
-};
-
-struct dsu {
+struct segment {
 	ll n;
-	vll t, rk;
-	dsu() {}
-	dsu(ll n_) {
-		n = n_;
-		t.resize(n);
-		iota(all(t), 0);
-		rk.assign(n, 1);
+	vll t;
+	segment() {}
+	segment(ll n_) {
+		ll l = log2(n_);
+		n = 1 << l;
+		t.assign(2 * n, 0);
 	}
-	ll find(ll v) {
-		if (v == t[v]) {
-			return v;
+	void build(vll &a) {
+		for (ll i = 0; i < n; i++) {
+			upd(i, a[i]);
 		}
-		return t[v] = find(t[v]);
 	}
-	void join(ll a, ll b) {
-		a = find(a), b = find(b);
-		if (a != b) {
-			if (rk[a] < rk[b]) {
-				swap(a, b);
-			}
-			t[b] = a;
-			if (rk[a] == rk[b]) {
-				++rk[a];
-			}
+	void upd(ll v, ll x) {
+		v += n;
+		t[v] = x;
+		v /= 2;
+		while (v > 0) {
+			t[v] = t[2 * v] + t[2 * v + 1];
+			v /= 2;
 		}
+	}
+	ll get(ll v, ll tl, ll tr, ll l, ll r) {
+		if (tl > r || tr < l) {
+			return 0;
+		}
+		if (l <= tl && tr <= r) {
+			return t[v];
+		}
+		ll tm = (tl + tr) / 2;
+		ll v1 = get(2 * v, tl, tm, l, r);
+		ll v2 = get(2 * v + 1, tm + 1, tr, l, r);
+		return v1 + v2;
 	}
 };
 
-ll n, m, stw, timer = 0;
-graph g, st;
-dsu d;
-vll ans, tin, tout, ind, dep;
-vector<vll> up, binmax;
-
-bool comp(ll a, ll b) {
-	return g.es[a] < g.es[b];
-}
-
-void kruskal() {
-	ind.resize(m);
-	iota(all(ind), 0);
-	sort(all(ind), comp);
-	d = dsu(g.n);
-	st = graph(g.n);
-	vll r;
-	stw = 0;
-	for (ll i : ind) {
-		edge e = g.es[i];
-		ll v = e.v, u = e.u;
-		if (d.find(v) != d.find(u)) {
-			d.join(v, u);
-			st.insert(e.v, e.u, e.w);
-			stw += e.w;
-			r.pb(i);
+struct fenwick {
+	ll n;
+	vll t;
+	fenwick() {}
+	fenwick(ll n_) {
+		n = n_;
+		t.resize(n, 0);
+	}
+	void build(vll& a) {
+		for (ll i = 0; i < n; i++) {
+			inc(i, a[i]);
 		}
 	}
-	for (ll i : r) {
-		ans[i] = stw;
+	ll f(ll i) {
+		return i & (i + 1);
 	}
-}
-
-void dfs(ll v, ll w, ll p) {
-	dep[v] = dep[p] + 1;
-	up[v][0] = p;
-	binmax[v][0] = w;
-	for (ll i = 1; i < LOG; i++) {
-		up[v][i] = up[up[v][i - 1]][i - 1];
-		binmax[v][i] = max(binmax[v][i - 1], binmax[up[v][i - 1]][i - 1]);
+	ll g(ll i) {
+		return i | (i + 1);
 	}
-	tin[v] = timer++;
-	for (edge e : st.adj[v]) {
-		if (e.u == p) {
-			continue;
-		}
-		dfs(e.u, e.w, v);
-	}
-	tout[v] = timer++;
-}
-
-bool upper(ll a, ll b) {
-	return tin[a] <= tin[b] && tout[a] >= tout[b];
-}
-
-ll lca(ll a, ll b) {
-	if (upper(a, b)) {
-		return a;
-	}
-	if (upper(b, a)) {
-		return b;
-	}
-	for (ll i = LOG - 1; i >= 0; i--) {
-		if (!upper(up[a][i], b)) {
-			a = up[a][i];
+	void inc(ll ind, ll d) {
+		for (ll i = ind; i < n; i = g(i)) {
+			t[i] += d;
 		}
 	}
-	return up[a][0];
-}
-
-bool checkbit(ll n, ll p) {
-	return n & (1 << p);
-}
-
-ll getmax(ll a, ll b) {
-	ll maxx = 0;
-	ll diff = dep[a] - dep[b];
-	for (ll i = LOG; i >= 0; i--) {
-		if (checkbit(diff, i)) {
-			maxeq(maxx, binmax[a][i]);
-			a = up[a][i];
+	ll sum(ll ind) {
+		ll ans = 0;
+		for (ll i = ind; i >= 0; i = f(i) - 1) {
+			ans += t[i];
 		}
+		return ans;
 	}
-	return maxx;
-}
+};
 
-ll add(ll v, ll u, ll w) {
-	ll c = lca(v, u);
-	ll m1 = getmax(v, c), m2 = getmax(u, c);
-	ll m = max(m1, m2);
-	return stw - m + w;
-}
+ll n, k;
+vll a;
+//segment st;
+fenwick f;
 
 inline void solve() {
-	kruskal();
-	tin.resize(st.n), tout.resize(st.n);
-	dep.resize(st.n);
-	dep[0] = -1;
-	up.assign(st.n, vll(LOG, 0));
-	binmax.assign(st.n, vll(LOG, 0));
-	dfs(0, 0, 0);
-	for (ll i = 0; i < sz(g.es); i++) {
-		if (ans[i]) {
-			continue;
+//	st = segment(n);
+	f = fenwick(n);
+//	st.build(a);
+	f.build(a);
+	for (ll i = 0; i < k; i++) {
+		ll op;
+		cin >> op;
+		if (op == 1) {
+			ll i, x;
+			cin >> i >> x;
+			--i;
+		//	st.upd(i, x);
+			f.inc(i, x - a[i]), a[i] = x;
+		} else if (op == 0) {
+			ll l, r;
+			cin >> l >> r;
+			--l, --r;
+		//	ll s = st.get(1, 0, st.n - 1, l, r);
+			ll s = f.sum(r) - f.sum(l - 1);
+			cout << s << endl;
 		}
-		edge e = g.es[i];
-		ans[i] = add(e.v, e.u, e.w);
 	}
-	for_each(all(ans), [](ll el) {cout << el << endl; });
 }
 
 inline void read() {
-	cin >> n >> m;
-	g = graph(n);
-	ans.resize(m, 0);
-	for (ll i = 0; i < m; i++) {
-		ll v, u, w;
-		cin >> v >> u >> w;
-		--v, --u;
-		g.insert(v, u, w);
+	cin >> n >> k;
+	a.resize(n);
+	for (ll i = 0; i < n; i++) {
+		cin >> a[i];
 	}
 }
 
 int main() {
+	freopen("rsq.in", "r", stdin);
+	freopen("rsq.out", "w", stdout);
 	fast;
 	read();
 	solve();

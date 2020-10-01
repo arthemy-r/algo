@@ -1,5 +1,4 @@
-1553
-// meow-meow
+// 1553
 #pragma GCC optimize("Ofast", "unroll-loops")
 #include <bits/stdc++.h>
 #include <unordered_set>
